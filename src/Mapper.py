@@ -39,6 +39,7 @@ class Mapper(object):
         self.mapping_idx = slam.mapping_idx
         self.mapping_cnt = slam.mapping_cnt
         self.decoders = slam.shared_decoders
+        self.gt_c2w_list = slam.gt_c2w_list
         self.estimate_c2w_list = slam.estimate_c2w_list
         self.mapping_first_frame = slam.mapping_first_frame
 
@@ -544,24 +545,28 @@ class Mapper(object):
         idx, gt_color, gt_depth, gt_c2w = self.frame_reader[0]
 
         self.estimate_c2w_list[0] = gt_c2w.cpu()
+        self.gt_c2w_list[0] = gt_c2w.cpu()
         init = True
         prev_idx = -1
         while (1):
-            while True:
-                idx = self.idx[0].clone()
-                if idx == self.n_img-1:
-                    break
-                if self.sync_method == 'strict':
-                    if idx % self.every_frame == 0 and idx != prev_idx:
-                        break
+            idx = self.idx[0].clone()
+            #while True:
+            #    idx = self.idx[0].clone()
+            #    if idx == self.n_img-1:
+            #        break
+            #    if self.sync_method == 'strict':
+            #        if idx % self.every_frame == 0 and idx != prev_idx:
+            #            break
 
-                elif self.sync_method == 'loose':
-                    if idx == 0 or idx >= prev_idx+self.every_frame//2:
-                        break
-                elif self.sync_method == 'free':
-                    break
-                time.sleep(0.1)
+            #    elif self.sync_method == 'loose':
+            #        if idx == 0 or idx >= prev_idx+self.every_frame//2:
+            #            break
+            #    elif self.sync_method == 'free':
+            #        break
+            #    time.sleep(0.1)
+
             prev_idx = idx
+            self.idx[0] += 1
 
             if self.verbose:
                 print(Fore.GREEN)
@@ -570,6 +575,9 @@ class Mapper(object):
                 print(Style.RESET_ALL)
 
             _, gt_color, gt_depth, gt_c2w = self.frame_reader[idx]
+            ## simply supply the ground truth
+            self.estimate_c2w_list[idx] = gt_c2w.cpu()
+            self.gt_c2w_list[idx] = gt_c2w.cpu()
 
             if not init:
                 lr_factor = cfg['mapping']['lr_factor']

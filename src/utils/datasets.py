@@ -123,6 +123,7 @@ class Replica(BaseDataset):
             glob.glob(f'{self.input_folder}/results/depth*.png'))
         self.n_img = len(self.color_paths)
         self.load_poses(f'{self.input_folder}/traj.txt')
+        print(self.n_img)
 
     def load_poses(self, path):
         self.poses = []
