@@ -1,0 +1,15 @@
+inherit_from: configs/Replica/replica.yaml
+mapping:
+  bound: [[-1.0, 11.0], [-2.0, 11.5], [-2.0, 5.5]]
+  marching_cubes_bound: [[-1.0, 11.0], [-2.0, 11.5], [-2.0, 5.5]]
+data:
+  input_folder: Datasets/Replica/room_0/Sequence_1/
+  output: output/Replica/room_0_1
+cam:
+  H: 480
+  W: 640
+  fx: 320.
+  fy: 320.
+  cx: 319.5
+  cy: 239.5
+  png_depth_scale: 1000.
