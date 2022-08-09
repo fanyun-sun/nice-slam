@@ -97,14 +97,18 @@ def calc_3d_metric(rec_meshfile, gt_meshfile, align=True):
     mesh_gt = trimesh.load(gt_meshfile, process=False)
 
     if align:
+        import pdb;pdb.set_trace()
         transformation = get_align_transformation(rec_meshfile, gt_meshfile)
         mesh_rec = mesh_rec.apply_transform(transformation)
+        import pdb;pdb.set_trace()
 
     rec_pc = trimesh.sample.sample_surface(mesh_rec, 200000)
     rec_pc_tri = trimesh.PointCloud(vertices=rec_pc[0])
 
     gt_pc = trimesh.sample.sample_surface(mesh_gt, 200000)
     gt_pc_tri = trimesh.PointCloud(vertices=gt_pc[0])
+
+
     accuracy_rec = accuracy(gt_pc_tri.vertices, rec_pc_tri.vertices)
     completion_rec = completion(gt_pc_tri.vertices, rec_pc_tri.vertices)
     completion_ratio_rec = completion_ratio(
