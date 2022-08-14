@@ -90,7 +90,7 @@ class BaseDataset(Dataset):
         color_data = cv2.cvtColor(color_data, cv2.COLOR_BGR2RGB)
         color_data = color_data / 255.
         depth_data = depth_data.astype(np.float32) / self.png_depth_scale
-        H, W = depth_data.shape
+        H, W = depth_data.shape[0], depth_data.shape[1]
         color_data = cv2.resize(color_data, (W, H))
         color_data = torch.from_numpy(color_data)
         depth_data = torch.from_numpy(depth_data)*self.scale

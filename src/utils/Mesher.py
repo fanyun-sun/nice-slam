@@ -500,8 +500,8 @@ class Mesher(object):
                 else:
                     new_components = []
                     for comp in components:
-                        if comp.area > self.remove_small_geometry_threshold * self.scale * self.scale:
-                            new_components.append(comp)
+                        # if comp.area > self.remove_small_geometry_threshold * self.scale * self.scale:
+                        new_components.append(comp)
                     mesh = trimesh.util.concatenate(new_components)
                 vertices = mesh.vertices
                 faces = mesh.faces
@@ -569,4 +569,3 @@ class Mesher(object):
             mesh.export(mesh_out_file)
             if self.verbose:
                 print('Saved mesh at', mesh_out_file)
-                

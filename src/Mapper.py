@@ -105,6 +105,11 @@ class Mapper(object):
             mask (tensor): mask for selected optimizable feature.
             points (tensor): corresponding point coordinates.
         """
+        ### dirty 
+        mask = np.ones(val_shape[::-1]).astype(np.bool)
+        return mask
+
+
         H, W, fx, fy, cx, cy, = self.H, self.W, self.fx, self.fy, self.cx, self.cy
         X, Y, Z = torch.meshgrid(torch.linspace(self.bound[0][0], self.bound[0][1], val_shape[2]),
                                  torch.linspace(self.bound[1][0], self.bound[1][1], val_shape[1]),
@@ -189,8 +194,8 @@ class Mapper(object):
         gt_depth = gt_depth.reshape(-1, 1)
         gt_depth = gt_depth.repeat(1, N_samples)
         t_vals = torch.linspace(0., 1., steps=N_samples).to(device)
-        near = gt_depth*0.8
-        far = gt_depth+0.5
+        near = 0.2 # gt_depth*0.8
+        far = 1.1 # gt_depth+0.5
         z_vals = near * (1.-t_vals) + far * (t_vals)
         pts = rays_o[..., None, :] + rays_d[..., None, :] * \
             z_vals[..., :, None]  # [N_rays, N_samples, 3]
@@ -414,9 +419,9 @@ class Mapper(object):
                 optimizer.param_groups[2]['lr'] = cfg['mapping']['stage'][self.stage]['middle_lr']*lr_factor
                 optimizer.param_groups[3]['lr'] = cfg['mapping']['stage'][self.stage]['fine_lr']*lr_factor
                 optimizer.param_groups[4]['lr'] = cfg['mapping']['stage'][self.stage]['color_lr']*lr_factor
-                if self.BA:
-                    if self.stage == 'color':
-                        optimizer.param_groups[5]['lr'] = self.BA_cam_lr
+                # if self.BA:
+                    # if self.stage == 'color':
+                        # optimizer.param_groups[5]['lr'] = self.BA_cam_lr
             else:
                 self.stage = 'color'
                 optimizer.param_groups[0]['lr'] = cfg['mapping']['imap_decoders_lr']
@@ -466,31 +471,31 @@ class Mapper(object):
             batch_gt_depth = torch.cat(batch_gt_depth_list)
             batch_gt_color = torch.cat(batch_gt_color_list)
 
-            if self.nice:
-                # should pre-filter those out of bounding box depth value
-                with torch.no_grad():
-                    det_rays_o = batch_rays_o.clone().detach().unsqueeze(-1)  # (N, 3, 1)
-                    det_rays_d = batch_rays_d.clone().detach().unsqueeze(-1)  # (N, 3, 1)
-                    t = (self.bound.unsqueeze(0).to(
-                        device)-det_rays_o)/det_rays_d
-                    t, _ = torch.min(torch.max(t, dim=2)[0], dim=1)
-                    inside_mask = t >= batch_gt_depth
-                batch_rays_d = batch_rays_d[inside_mask]
-                batch_rays_o = batch_rays_o[inside_mask]
-                batch_gt_depth = batch_gt_depth[inside_mask]
-                batch_gt_color = batch_gt_color[inside_mask]
+            #if self.nice:
+            #    # should pre-filter those out of bounding box depth value
+            #    with torch.no_grad():
+            #        det_rays_o = batch_rays_o.clone().detach().unsqueeze(-1)  # (N, 3, 1)
+            #        det_rays_d = batch_rays_d.clone().detach().unsqueeze(-1)  # (N, 3, 1)
+            #        t = (self.bound.unsqueeze(0).to(
+            #            device)-det_rays_o)/det_rays_d
+            #        t, _ = torch.min(torch.max(t, dim=2)[0], dim=1)
+            #        inside_mask = t >= batch_gt_depth
+            #    batch_rays_d = batch_rays_d[inside_mask]
+            #    batch_rays_o = batch_rays_o[inside_mask]
+            #    batch_gt_depth = batch_gt_depth[inside_mask]
+            #    batch_gt_color = batch_gt_color[inside_mask]
             ret = self.renderer.render_batch_ray(c, self.decoders, batch_rays_d,
                                                  batch_rays_o, device, self.stage,
-                                                 gt_depth=None if self.coarse_mapper else batch_gt_depth)
+                                                 gt_depth=None)
             depth, uncertainty, color = ret
 
-            depth_mask = (batch_gt_depth > 0)
-            loss = torch.abs(
-                batch_gt_depth[depth_mask]-depth[depth_mask]).sum()
-            if ((not self.nice) or (self.stage == 'color')):
-                color_loss = torch.abs(batch_gt_color - color).sum()
-                weighted_color_loss = self.w_color_loss*color_loss
-                loss += weighted_color_loss
+            #depth_mask = (batch_gt_depth > 0)
+            #loss = torch.abs(
+            #    batch_gt_depth[depth_mask]-depth[depth_mask]).sum()
+
+            color_loss = torch.abs(batch_gt_color - color).sum()
+            weighted_color_loss = self.w_color_loss*color_loss
+            loss = weighted_color_loss
 
             # for imap*, it use volume density
             regulation = (not self.occupancy)
@@ -641,7 +646,7 @@ class Mapper(object):
                 self.mapping_idx[0] = idx
                 self.mapping_cnt[0] += 1
 
-                if True or (idx % self.mesh_freq == 0) and (not (idx == 0 and self.no_mesh_on_first_frame)):
+                if (idx % self.mesh_freq == 0) and (not (idx == 0 and self.no_mesh_on_first_frame)):
                     mesh_out_file = f'{self.output}/mesh/{idx:05d}_mesh.ply'
                     self.mesher.get_mesh(mesh_out_file, self.c, self.decoders, self.keyframe_dict, self.estimate_c2w_list,
                                          idx,  self.device, show_forecast=self.mesh_coarse_level,
